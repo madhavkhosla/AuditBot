@@ -20,6 +20,7 @@ type UserResource struct {
 	QuitChannel   chan int
 	FormName      string
 	Modify        bool
+	lastAns		  int
 }
 
 func MessageLoop(rtm *slack.RTM) {
@@ -48,7 +49,10 @@ Loop:
 			if helpCommandInvoked {
 				continue Loop
 			}
-			auditBotClient.createMessage(ev, userOpenFormMap, userAllResourceMap)
+			createCommandInvoked := auditBotClient.createMessage(ev, userOpenFormMap, userAllResourceMap)
+			if createCommandInvoked {
+				continue Loop
+			}
 			auditBotClient.processAnswer(ev, userOpenFormMap)
 
 		case *slack.RTMError:

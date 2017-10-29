@@ -1,69 +1,47 @@
 package main
 
 import (
-	"github.com/nlopes/slack"
 	"fmt"
-	//"io/ioutil"
+
 	"strconv"
+
+	"github.com/nlopes/slack"
+	"database/sql"
 )
 
 var questions = []string{"Team Name", "PO Name", "Prod Release Date", "Business Justification"}
 
 func (a AuditBotClient) sendQuestions(ev *slack.MessageEvent, syncChannel chan int,
-	userAllResourceMap map[string]map[string]*UserResource, startI int, UniqueId string) {
+	userAllResourceMap map[string]map[string]*UserResource, UniqueId string) {
 
-	for i := startI; i < len(questions); {
+	existingUserResource := userAllResourceMap[ev.User]
+	currentOpenForm := existingUserResource[UniqueId]
+	for {
 		postMessgeParameters := slack.NewPostMessageParameters()
 		postMessgeParameters.Attachments = []slack.Attachment{
 			{
-				Title: questions[i],
+				Title: questions[currentOpenForm.lastAns],
 				Color: "#7CD197",
 			},
 		}
 		a.Rtm.PostMessage(ev.Channel, "Question", postMessgeParameters)
 		index := <-syncChannel
-		if index == -1 {
-			i = i + 1
+		if index >= len(questions) {
+			fmt.Println("last question answered")
+			break
 		} else {
-			fmt.Printf("Index is %v\n", index)
-			i = index
+			fmt.Printf("last row inserted %v\n", index)
+			currentOpenForm.lastAns = index
 		}
 	}
-	existingUserResource := userAllResourceMap[ev.User]
 	fmt.Println(existingUserResource)
-	a.submitForm(ev, existingUserResource[UniqueId])
+	a.submitForm(ev, currentOpenForm)
 }
 
 func (a AuditBotClient) submitForm(ev *slack.MessageEvent, existingUserResource *UserResource) {
 
+	allAnswers, _ := a.readTable(ev.Channel, existingUserResource.DB, existingUserResource.FormName)
 
-	rows, err := existingUserResource.DB.Query(fmt.Sprintf("SELECT answer FROM %s", existingUserResource.FormName))
-	if err != nil {
-		panic(err)
-	}
-	var allAnswers string = ""
-	for rows.Next() {
-		var answer string
-		err = rows.Scan(&answer)
-		if err != nil {
-			panic(err)
-		}
-		if len(allAnswers) > 0 {
-			allAnswers = fmt.Sprintf("%s,%s", allAnswers, answer)
-		} else {
-			allAnswers = fmt.Sprintf("%s", answer)
-		}
-
-	}
-
-
-
-	//b, err := ioutil.ReadFile(fmt.Sprintf("/tmp/%s", existingUserResource.FormName))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//ansFile := string(b)
-	//fmt.Println(fmt.Sprintf("%s", ansFile))
 	postMessgeParameters := slack.NewPostMessageParameters()
 	postMessgeParameters.AsUser = true
 	questionOptions := []slack.AttachmentActionOption{}
@@ -94,4 +72,43 @@ func (a AuditBotClient) submitForm(ev *slack.MessageEvent, existingUserResource 
 	}
 	a.Rtm.PostMessage(ev.Channel, "", postMessgeParameters)
 
+}
+
+func (a AuditBotClient) readTable(eventChannel string, db *sql.DB, formName string) (string, int) {
+	answerArray := make([]slack.AttachmentField, 0, len(questions))
+	rows, err := db.Query(fmt.Sprintf("SELECT answer FROM %s", formName))
+	if err != nil {
+		panic(err)
+	}
+	questionAnsweredCount := 0
+	var allAnswers string = ""
+	for rows.Next() {
+		var answer string
+		err = rows.Scan(&answer)
+		if err != nil {
+			panic(err)
+		}
+		answerArray = append(answerArray, slack.AttachmentField{
+				Title: questions[questionAnsweredCount],
+				Value: answer,
+				Short: false,
+			})
+		if len(allAnswers) > 0 {
+			allAnswers = fmt.Sprintf("%s,%s", allAnswers, answer)
+		} else {
+			allAnswers = fmt.Sprintf("%s", answer)
+		}
+		questionAnsweredCount += 1
+	}
+		postMessgeParameters := slack.NewPostMessageParameters()
+		postMessgeParameters.AsUser = true
+		postMessgeParameters.Attachments = []slack.Attachment{
+			{
+				Title:  "Intake form filled till now.",
+				Color:  "#7CD197",
+				Fields: answerArray,
+			},
+		}
+		a.Rtm.PostMessage(eventChannel, "", postMessgeParameters)
+	return allAnswers, questionAnsweredCount
 }

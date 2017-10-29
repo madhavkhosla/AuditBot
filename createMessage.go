@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/nlopes/slack"
-	"strings"
 	"fmt"
+	"strings"
 
+	"github.com/nlopes/slack"
+
+	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
-	"database/sql"
 )
 
 func (a AuditBotClient) createMessage(ev *slack.MessageEvent, userOpenFormMap map[string]*UserResource, userAllResourceMap map[string]map[string]*UserResource) bool {
@@ -53,13 +54,13 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 	modifyChannel := make(chan *slack.MessageEvent)
 	inputStringLength := strings.Split(ev.Text, " ")
 	UniqueId := inputStringLength[2]
-	_, ok := userAllResourceMap[ev.User][UniqueId]
-	db, err := sql.Open("mysql", "madhav:password@/Auditbot")
-	if err != nil {
-		fmt.Errorf(err.Error())
-	}
+	existingUserForm, ok := userAllResourceMap[ev.User][UniqueId]
 
 	if !ok {
+		db, err := sql.Open("mysql", "madhav:password@/Auditbot")
+		if err != nil {
+			fmt.Errorf(err.Error())
+		}
 		newUserFormResourceMap := make(map[string]*UserResource)
 		// If program restarts, we need to check if form had been previously started. As the
 		// form is no longer in memory, this check is required.
@@ -83,13 +84,41 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 				db,
 				make(chan int),
 				UniqueId,
-				false}
+				false,
+				0}
 			userAllResourceMap[ev.User] = newUserFormResourceMap
 			userOpenFormMap[ev.User] = userAllResourceMap[ev.User][UniqueId]
 			fmt.Println(userAllResourceMap)
-			go a.sendQuestions(ev, syncChannel, userAllResourceMap, 0, UniqueId)
+			go a.sendQuestions(ev, syncChannel, userAllResourceMap, UniqueId)
+		} else {
+			// Table already exists, only reloading stuff in memory
+			_, questionAnsweredCount := a.readTable(ev.Channel, db, UniqueId)
+
+			newUserFormResourceMap[UniqueId] = &UserResource{userChannel,
+				modifyChannel,
+				syncChannel,
+				db,
+				make(chan int),
+				UniqueId,
+				false,
+				questionAnsweredCount}
+			userAllResourceMap[ev.User] = newUserFormResourceMap
+			userOpenFormMap[ev.User] = userAllResourceMap[ev.User][UniqueId]
+			fmt.Println(userAllResourceMap)
+			go a.sendQuestions(ev, syncChannel, userAllResourceMap, UniqueId)
 		}
 		go a.startUserRoutine(userOpenFormMap[ev.User])
+	} else {
+		_, questionAnsweredCount := a.readTable(ev.Channel, existingUserForm.DB, UniqueId)
+		existingUserForm.Modify = false
+		userOpenFormMap[ev.User] = existingUserForm
+		if questionAnsweredCount >= len(questions) {
+			a.submitForm(ev, existingUserForm)
+			return
+		}
+		if questionAnsweredCount >= 0 {
+			userOpenFormMap[ev.User].SyncChannel <- questionAnsweredCount
+		}
 	}
 }
 
@@ -112,7 +141,7 @@ func (a AuditBotClient) startUserRoutine(existingUserResource *UserResource) {
 				panic(err)
 			}
 			fmt.Println(fmt.Sprintf("Last row inserted %v", id))
-			existingUserResource.SyncChannel <- -1
+			existingUserResource.SyncChannel <- int(id)
 		case <-existingUserResource.QuitChannel:
 			fmt.Println("quit")
 			return
