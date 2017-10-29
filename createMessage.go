@@ -61,13 +61,15 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 
 	if !ok {
 		newUserFormResourceMap := make(map[string]*UserResource)
-
+		// If program restarts, we need to check if form had been previously started. As the
+		// form is no longer in memory, this check is required.
 		formTableExistsStatement := fmt.Sprintf("show tables like '%s';", UniqueId)
 		rows, err := db.Query(formTableExistsStatement)
 		if err != nil {
 			panic("DB connection failed")
 		}
 		if !rows.Next() {
+			// Form being started for the first time.
 			fmt.Println("Form table does not exist")
 			// create form table
 			_, err := db.Exec(fmt.Sprintf("CREATE TABLE %s ( id int(10) NOT NULL AUTO_INCREMENT, answer varchar(500),  PRIMARY KEY (id) )", UniqueId))

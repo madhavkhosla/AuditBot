@@ -9,30 +9,61 @@ import (
 	"github.com/julienschmidt/httprouter"
 	//"github.com/nlopes/slack"
 
-	"os"
 	"log"
+	"os"
 	//"encoding/json"
 	"encoding/json"
+
+	"net/url"
+
+	"strings"
+
 	"github.com/nlopes/slack"
 )
 
-const CREATE  = "create"
+const CREATE = "create"
 
 type AuthResponse struct {
 	AccessToken string `json:"access_token"`
-	Bot struct{
-		BotUserId string `json:"bot_user_id"`
+	Bot         struct {
+		BotUserId      string `json:"bot_user_id"`
 		BotAccessToken string `json:"bot_access_token"`
 	} `json:"bot"`
 }
 
 type SlackApp struct {
-	ClientId string
+	ClientId     string
 	ClientSecret string
+}
+type InteractiveMessageRequest struct {
+	Actions []slack.AttachmentAction
+	Channel slack.Channel
+	User    slack.User
 }
 
 func (slackApp SlackApp) Submit(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Println(r)
+	//defer r.Body.Close()
+	//x := slack.Attachment{Actions: []slack.AttachmentAction{}}
+	//json.NewDecoder(r.Body).Decode(x)
+	//fmt.Println(x)
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	str, err := url.QueryUnescape(string(body))
+	if err != nil {
+		panic(err)
+	}
+	i := strings.Index(str, "=")
+	newStr := str[i+1:]
+	fmt.Println(newStr)
+	x := InteractiveMessageRequest{}
+	err = json.Unmarshal([]byte(newStr), &x)
+	if err != nil {
+		log.Printf("Error while un-marshaling request %s \n", err.Error())
+	}
+	fmt.Println(x.Actions[0].Value)
 }
 
 func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -70,15 +101,13 @@ func main() {
 	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	slackApp := SlackApp{
-		ClientId:clientId,
-		ClientSecret:clientSecret,
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
 	}
 	router := httprouter.New()
 	router.GET("/", slackApp.Auth)
-	router.GET("/submit", slackApp.Submit)
+	router.POST("/submit", slackApp.Submit)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
-
-
 
 }
