@@ -5,8 +5,9 @@ import (
 
 	"strconv"
 
-	"github.com/nlopes/slack"
 	"database/sql"
+
+	"github.com/nlopes/slack"
 )
 
 var questions = []string{"Team Name", "PO Name", "Prod Release Date", "Business Justification"}
@@ -71,14 +72,13 @@ func (a AuditBotClient) submitForm(ev *slack.MessageEvent, existingUserResource 
 		},
 	}
 	a.Rtm.PostMessage(ev.Channel, "", postMessgeParameters)
-
 }
 
 func (a AuditBotClient) readTable(eventChannel string, db *sql.DB, formName string) (string, int) {
 	answerArray := make([]slack.AttachmentField, 0, len(questions))
 	rows, err := db.Query(fmt.Sprintf("SELECT answer FROM %s", formName))
 	if err != nil {
-		panic(err)
+		a.err <- err
 	}
 	questionAnsweredCount := 0
 	var allAnswers string = ""
@@ -86,13 +86,13 @@ func (a AuditBotClient) readTable(eventChannel string, db *sql.DB, formName stri
 		var answer string
 		err = rows.Scan(&answer)
 		if err != nil {
-			panic(err)
+			a.err <- err
 		}
 		answerArray = append(answerArray, slack.AttachmentField{
-				Title: questions[questionAnsweredCount],
-				Value: answer,
-				Short: false,
-			})
+			Title: questions[questionAnsweredCount],
+			Value: answer,
+			Short: false,
+		})
 		if len(allAnswers) > 0 {
 			allAnswers = fmt.Sprintf("%s,%s", allAnswers, answer)
 		} else {
@@ -100,15 +100,15 @@ func (a AuditBotClient) readTable(eventChannel string, db *sql.DB, formName stri
 		}
 		questionAnsweredCount += 1
 	}
-		postMessgeParameters := slack.NewPostMessageParameters()
-		postMessgeParameters.AsUser = true
-		postMessgeParameters.Attachments = []slack.Attachment{
-			{
-				Title:  "Intake form filled till now.",
-				Color:  "#7CD197",
-				Fields: answerArray,
-			},
-		}
-		a.Rtm.PostMessage(eventChannel, "", postMessgeParameters)
+	postMessgeParameters := slack.NewPostMessageParameters()
+	postMessgeParameters.AsUser = true
+	postMessgeParameters.Attachments = []slack.Attachment{
+		{
+			Title:  "Intake form filled till now.",
+			Color:  "#7CD197",
+			Fields: answerArray,
+		},
+	}
+	a.Rtm.PostMessage(eventChannel, "", postMessgeParameters)
 	return allAnswers, questionAnsweredCount
 }

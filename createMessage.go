@@ -59,7 +59,7 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 	if !ok {
 		db, err := sql.Open("mysql", "madhav:password@/Auditbot")
 		if err != nil {
-			fmt.Errorf(err.Error())
+			a.err <- err
 		}
 		newUserFormResourceMap := make(map[string]*UserResource)
 		// If program restarts, we need to check if form had been previously started. As the
@@ -67,7 +67,7 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 		formTableExistsStatement := fmt.Sprintf("show tables like '%s';", UniqueId)
 		rows, err := db.Query(formTableExistsStatement)
 		if err != nil {
-			panic("DB connection failed")
+			a.err <- err
 		}
 		if !rows.Next() {
 			// Form being started for the first time.
@@ -75,7 +75,7 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 			// create form table
 			_, err := db.Exec(fmt.Sprintf("CREATE TABLE %s ( id int(10) NOT NULL AUTO_INCREMENT, answer varchar(500),  PRIMARY KEY (id) )", UniqueId))
 			if err != nil {
-				panic(err)
+				a.err <- err
 			}
 
 			newUserFormResourceMap[UniqueId] = &UserResource{userChannel,
@@ -129,16 +129,16 @@ func (a AuditBotClient) startUserRoutine(existingUserResource *UserResource) {
 
 			stmt, err := existingUserResource.DB.Prepare(fmt.Sprintf("INSERT %s SET answer=?", existingUserResource.FormName))
 			if err != nil {
-				panic(err)
+				a.err <- err
 			}
 
 			res, err := stmt.Exec(userEvent.Text)
 			if err != nil {
-				panic(err)
+				a.err <- err
 			}
 			id, err := res.LastInsertId()
 			if err != nil {
-				panic(err)
+				a.err <- err
 			}
 			fmt.Println(fmt.Sprintf("Last row inserted %v", id))
 			existingUserResource.SyncChannel <- int(id)

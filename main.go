@@ -42,28 +42,31 @@ type InteractiveMessageRequest struct {
 }
 
 func (slackApp SlackApp) Submit(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	//defer r.Body.Close()
-	//x := slack.Attachment{Actions: []slack.AttachmentAction{}}
-	//json.NewDecoder(r.Body).Decode(x)
-	//fmt.Println(x)
+	token := os.Getenv("SLACK_AUTH_TOKEN")
+	api := slack.New(token)
+	rtm := api.NewRTM()
+	go rtm.ManageConnection()
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		panic(err)
+		fmt.Errorf("%s", err)
 	}
-	str, err := url.QueryUnescape(string(body))
+	unEscapedBody, err := url.QueryUnescape(string(body))
 	if err != nil {
-		panic(err)
+		fmt.Errorf("%s", err)
 	}
-	i := strings.Index(str, "=")
-	newStr := str[i+1:]
-	fmt.Println(newStr)
-	x := InteractiveMessageRequest{}
-	err = json.Unmarshal([]byte(newStr), &x)
+	i := strings.Index(unEscapedBody, "=")
+	payload := unEscapedBody[i+1:]
+
+	interactiveMessageRequest := InteractiveMessageRequest{}
+	err = json.Unmarshal([]byte(payload), &interactiveMessageRequest)
 	if err != nil {
-		log.Printf("Error while un-marshaling request %s \n", err.Error())
+		fmt.Printf("Error while un-marshaling request %s \n", err.Error())
 	}
-	fmt.Println(x.Actions[0].Value)
+	postMessgeParameters := slack.NewPostMessageParameters()
+	rtm.PostMessage(interactiveMessageRequest.Channel.ID,
+		fmt.Sprintf("Submitted Form %s", interactiveMessageRequest.User.ID), postMessgeParameters)
+	fmt.Println(interactiveMessageRequest.Actions[0].Value)
 }
 
 func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -89,7 +92,7 @@ func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprout
 	if err := json.Unmarshal(body, &authResponse); err != nil {
 		fmt.Printf("Error during authetication %s", err.Error())
 	}
-
+	os.Setenv("SLACK_AUTH_TOKEN", authResponse.Bot.BotAccessToken)
 	api := slack.New(authResponse.Bot.BotAccessToken)
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
