@@ -20,6 +20,7 @@ import (
 
 	"strconv"
 
+	"github.com/andygrunwald/go-jira"
 	"github.com/nlopes/slack"
 )
 
@@ -37,6 +38,7 @@ type AuthResponse struct {
 type SlackApp struct {
 	ClientId     string
 	ClientSecret string
+	Config       map[string]interface{}
 }
 type InteractiveMessageRequest struct {
 	Actions []slack.AttachmentAction
@@ -67,9 +69,16 @@ func (slackApp SlackApp) Submit(w http.ResponseWriter, r *http.Request, _ httpro
 		fmt.Printf("Error while un-marshaling request %s \n", err.Error())
 	}
 	if interactiveMessageRequest.Actions[0].Name == "Submit" {
+		jiraIssueCreated := slackApp.createJiraIssue(interactiveMessageRequest)
 		postMessgeParameters := slack.NewPostMessageParameters()
-		rtm.PostMessage(interactiveMessageRequest.Channel.ID,
-			fmt.Sprintf("Submitted Form %s", interactiveMessageRequest.User.ID), postMessgeParameters)
+		var msg string
+		if jiraIssueCreated {
+			msg = fmt.Sprintf("Submitted Form %s", interactiveMessageRequest.User.ID)
+		} else {
+			msg = fmt.Sprintf("Error while subitting jira issue. Please press submit again." +
+				"If error persists call the support team.")
+		}
+		rtm.PostMessage(interactiveMessageRequest.Channel.ID, msg, postMessgeParameters)
 		fmt.Println(interactiveMessageRequest)
 	} else if interactiveMessageRequest.Actions[0].Name == "Select" {
 
@@ -118,12 +127,59 @@ func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprout
 
 }
 
+func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMessageRequest) bool {
+	var description string
+	answers := strings.Split(interactiveMessageRequest.Actions[0].Value, ",")
+	for i := 3; i < len(questions); i++ {
+		description = fmt.Sprintf("%s\nQuestion; %s\nAnswer: %s", description, questions[i], answers[i])
+	}
+	jiraClient, err := jira.NewClient(nil, "https://madhav-test.atlassian.net")
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+
+	res, err := jiraClient.Authentication.AcquireSessionCookie("khoslamaddy@gmail.com", "maserati273")
+	if err != nil || res == false {
+		fmt.Printf("Result: %v\n", res)
+		fmt.Println(err.Error())
+	}
+	i := jira.Issue{
+		Fields: &jira.IssueFields{
+			Assignee: &jira.User{
+				Name: "admin",
+			},
+			Description: description,
+			Type: jira.IssueType{
+				Name: "Story",
+			},
+			Project: jira.Project{
+				Key: "FOR",
+			},
+			Summary: fmt.Sprintf("Intake Form - %s", answers[0]),
+			Reporter: &jira.User{
+				Name: fmt.Sprintf("%s", answers[1]),
+			},
+			Duedate: answers[2],
+		},
+	}
+	issue, _, err := jiraClient.Issue.Create(&i)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	fmt.Println(issue)
+	return true
+}
+
 func main() {
+	config := readConfig()
 	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	slackApp := SlackApp{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
+		Config:       config,
 	}
 	router := httprouter.New()
 	router.GET("/", slackApp.Auth)

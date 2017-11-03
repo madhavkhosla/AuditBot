@@ -1,0 +1,19 @@
+{
+  "jira": {
+    "username": "khoslamaddy@gmail.com",
+    "password": "maserati273",
+    "baseUrl": "https://madhav-test.atlassian.net"
+  },
+  "slack": {
+    "clientId": "189197742244.254603813941",
+    "clientSecret": "8133da8b1cea1cc2d3647925c36d532e"
+  },
+  "database": {
+    "dbName": "Auditbot",
+    "user": "madhav",
+    "password": "password"
+  },
+  "questions": {
+    "path": "/Users/madhav/GoglandProjects/src/github.com/madhavkhosla/AuditBot"
+  }
+}
