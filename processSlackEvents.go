@@ -56,6 +56,10 @@ Loop:
 				if createCommandInvoked {
 					continue Loop
 				}
+				modifyCommandInvoked := auditBotClient.modifyForm(ev, userOpenFormMap)
+				if modifyCommandInvoked {
+					continue Loop
+				}
 				auditBotClient.processAnswer(ev, userOpenFormMap, userAllResourceMap)
 
 			case *slack.RTMError:

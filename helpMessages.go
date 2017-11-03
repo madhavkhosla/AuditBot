@@ -13,16 +13,16 @@ func (a AuditBotClient) HelpCommands(ev *slack.MessageEvent) bool {
 		postMessgeParameters.Attachments = []slack.Attachment{
 			{
 				Title: "Command to start or restore an intake form",
-				Text:  "@formbot create [Unique-id]",
+				Text:  "@auditbot create [Unique-id]",
 				Color: "#7CD197",
 			},
 			{
 				Title: "Command to modify a question once form is started",
-				Text:  "@formbot modify",
+				Text:  "@auditbot modify",
 				Color: "#7CD197",
 			},
 		}
-		a.Rtm.PostMessage(ev.Channel, fmt.Sprintf("Formbot help commands"), postMessgeParameters)
+		a.Rtm.PostMessage(ev.Channel, fmt.Sprintf("Auditbot help commands"), postMessgeParameters)
 		return true
 	}
 	return false

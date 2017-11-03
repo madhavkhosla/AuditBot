@@ -140,7 +140,7 @@ func (a AuditBotClient) startUserRoutine(existingUserResource *UserResource) {
 			if err != nil {
 				a.err <- err
 			}
-			fmt.Println(fmt.Sprintf("Last row inserted %v", id))
+			fmt.Println(fmt.Sprintf("Last row inserted %v last ans is %v", id, existingUserResource.lastAns))
 			existingUserResource.SyncChannel <- int(id)
 		case <-existingUserResource.QuitChannel:
 			fmt.Println("quit")

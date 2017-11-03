@@ -18,10 +18,13 @@ import (
 
 	"strings"
 
+	"strconv"
+
 	"github.com/nlopes/slack"
 )
 
 const CREATE = "create"
+const MODIFY = "modify"
 
 type AuthResponse struct {
 	AccessToken string `json:"access_token"`
@@ -63,10 +66,25 @@ func (slackApp SlackApp) Submit(w http.ResponseWriter, r *http.Request, _ httpro
 	if err != nil {
 		fmt.Printf("Error while un-marshaling request %s \n", err.Error())
 	}
-	postMessgeParameters := slack.NewPostMessageParameters()
-	rtm.PostMessage(interactiveMessageRequest.Channel.ID,
-		fmt.Sprintf("Submitted Form %s", interactiveMessageRequest.User.ID), postMessgeParameters)
-	fmt.Println(interactiveMessageRequest.Actions[0].Value)
+	if interactiveMessageRequest.Actions[0].Name == "Submit" {
+		postMessgeParameters := slack.NewPostMessageParameters()
+		rtm.PostMessage(interactiveMessageRequest.Channel.ID,
+			fmt.Sprintf("Submitted Form %s", interactiveMessageRequest.User.ID), postMessgeParameters)
+		fmt.Println(interactiveMessageRequest)
+	} else if interactiveMessageRequest.Actions[0].Name == "Select" {
+
+		questionToModify := interactiveMessageRequest.Actions[0].SelectedOptions[0].Value
+		fmt.Printf("Question To Modify %s \n", questionToModify)
+		questionNumber, err := strconv.Atoi(questionToModify)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		userName := interactiveMessageRequest.User.ID
+		postMessgeParameters := slack.NewPostMessageParameters()
+
+		rtm.PostMessage(interactiveMessageRequest.Channel.ID,
+			fmt.Sprintf("%s Modify Question %d", userName, questionNumber+1), postMessgeParameters)
+	}
 }
 
 func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

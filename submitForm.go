@@ -17,7 +17,7 @@ func (a AuditBotClient) sendQuestions(ev *slack.MessageEvent, syncChannel chan i
 
 	existingUserResource := userAllResourceMap[ev.User]
 	currentOpenForm := existingUserResource[UniqueId]
-	for {
+	for currentOpenForm.lastAns < len(questions){
 		postMessgeParameters := slack.NewPostMessageParameters()
 		postMessgeParameters.Attachments = []slack.Attachment{
 			{

@@ -14,6 +14,10 @@ func (a AuditBotClient) processAnswer(ev *slack.MessageEvent, userOpenFormMap ma
 		fmt.Println(ev.Text)
 		existingUserResource, ok := userOpenFormMap[ev.User]
 		if ok {
+			if existingUserResource.Modify {
+				existingUserResource.ModifyChannel <- ev
+				return
+			}
 			existingUserResource.UserChannel <- ev
 		}
 	} else {
@@ -40,6 +44,14 @@ func (a AuditBotClient) processAnswer(ev *slack.MessageEvent, userOpenFormMap ma
 			delete(userOpenFormMap, user)
 			fmt.Println(existingUserResource)
 			fmt.Println(userOpenFormMap)
+		} else if strings.Contains(ev.Text, "Modify Question") {
+			// This is invoked by the formbot, to modify the question specified by user in the above step
+			inputStringLength := strings.Split(ev.Text, " ")
+			user := inputStringLength[0]
+			fmt.Println(user)
+			existingUserResource := userOpenFormMap[user]
+			existingUserResource.Modify = true
+			go a.updateAnswer(ev, existingUserResource)
 		}
 	}
 }
