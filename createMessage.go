@@ -57,7 +57,7 @@ func (a AuditBotClient) startForm(ev *slack.MessageEvent, userOpenFormMap map[st
 	existingUserForm, ok := userAllResourceMap[ev.User][UniqueId]
 
 	if !ok {
-		db, err := sql.Open("mysql", "madhav:password@/Auditbot")
+		db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@/%s", DatabaseUserName, DatabasePassword, DatabaseName))
 		if err != nil {
 			a.err <- err
 		}

@@ -22,10 +22,19 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/nlopes/slack"
+	"bufio"
 )
 
 const CREATE = "create"
 const MODIFY = "modify"
+
+
+type question struct {
+	Text string
+	Hint string
+}
+
+var questions []string
 
 type AuthResponse struct {
 	AccessToken string `json:"access_token"`
@@ -38,8 +47,8 @@ type AuthResponse struct {
 type SlackApp struct {
 	ClientId     string
 	ClientSecret string
-	Config       map[string]interface{}
 }
+
 type InteractiveMessageRequest struct {
 	Actions []slack.AttachmentAction
 	Channel slack.Channel
@@ -99,7 +108,7 @@ func (slackApp SlackApp) Submit(w http.ResponseWriter, r *http.Request, _ httpro
 func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	code := r.URL.Query()["code"][0]
 
-	url := fmt.Sprintf("https://slack.com/api/oauth.access?client_id=%s&client_secret=%s&code=%s&redirect_uri=http://localhost:8080/", "189197742244.254603813941", "8133da8b1cea1cc2d3647925c36d532e", code)
+	url := fmt.Sprintf("https://slack.com/api/oauth.access?client_id=%s&client_secret=%s&code=%s&redirect_uri=%s", slackApp.ClientId, slackApp.ClientSecret, code, OAuthRedirectUri)
 	authReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Printf("Error during authetication %s", err.Error())
@@ -133,13 +142,13 @@ func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMe
 	for i := 3; i < len(questions); i++ {
 		description = fmt.Sprintf("%s\nQuestion; %s\nAnswer: %s", description, questions[i], answers[i])
 	}
-	jiraClient, err := jira.NewClient(nil, "https://madhav-test.atlassian.net")
+	jiraClient, err := jira.NewClient(nil, JiraBaseUrl)
 	if err != nil {
 		fmt.Println(err.Error())
 		return false
 	}
 
-	res, err := jiraClient.Authentication.AcquireSessionCookie("khoslamaddy@gmail.com", "maserati273")
+	res, err := jiraClient.Authentication.AcquireSessionCookie(JiraUserName, JiraPassword)
 	if err != nil || res == false {
 		fmt.Printf("Result: %v\n", res)
 		fmt.Println(err.Error())
@@ -172,15 +181,31 @@ func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMe
 	return true
 }
 
+func readQuestions(path string) []string {
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Errorf("Error opening Questions file")
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	questionsSlice := make([]string,0)
+	for scanner.Scan() {
+		questionsSlice = append(questionsSlice, scanner.Text())
+	}
+	return questionsSlice
+}
+
 func main() {
-	config := readConfig()
-	clientId := os.Getenv("CLIENT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
+	readConfig()
+	questions = readQuestions(QuestionsFilePath)
+	clientId := SlackClientId
+	clientSecret := SlackSecret
 	slackApp := SlackApp{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
-		Config:       config,
 	}
+	fmt.Println(slackApp)
 	router := httprouter.New()
 	router.GET("/", slackApp.Auth)
 	router.POST("/submit", slackApp.Submit)

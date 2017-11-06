@@ -2,11 +2,11 @@
   "jira": {
     "username": "khoslamaddy@gmail.com",
     "password": "maserati273",
-    "baseUrl": "https://madhav-test.atlassian.net"
+    "baseUrl": "https://madhav-test1.atlassian.net"
   },
   "slack": {
-    "clientId": "189197742244.254603813941",
-    "clientSecret": "8133da8b1cea1cc2d3647925c36d532e"
+    "clientId": "84201670823.266811782356",
+    "clientSecret": "156a7f252d03cd9aa4cc7715cba7f976"
   },
   "database": {
     "dbName": "Auditbot",
@@ -14,6 +14,9 @@
     "password": "password"
   },
   "questions": {
-    "path": "/Users/madhav/GoglandProjects/src/github.com/madhavkhosla/AuditBot"
+    "path": "/tmp/AuditBot.txt"
+  },
+  "oauth": {
+    "redirectUri": "http://localhost:8080/"
   }
 }
