@@ -2,15 +2,8 @@ Requesting Team Name
 Requester Name
 Desired Release Date
 Requester Email
-Requesting Art
 Requesting Team PO
-Requesting Team BSA
-Requesting Team Scrum Master
-Impacted Platform
-Request Type
-Initiative Description Including any dependencies
 Business Justification
 Justification for Desired Release Date
 Business Impact if desired release data not met
-Epic
 Priority Level

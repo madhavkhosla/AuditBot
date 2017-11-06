@@ -1,0 +1,23 @@
+{
+  "jira": {
+    "username": "",
+    "password": "",
+    "baseUrl": "",
+    "project" : ""
+  },
+  "slack": {
+    "clientId": "",
+    "clientSecret": ""
+  },
+  "database": {
+    "dbName": "",
+    "user": "",
+    "password": ""
+  },
+  "questions": {
+    "path": "./Auditbot.txt"
+  },
+  "oauth": {
+    "redirectUri": "http://localhost:8080/"
+  }
+}
