@@ -10,8 +10,6 @@ import (
 	"github.com/nlopes/slack"
 )
 
-//var questions = []string{"Team Name", "PO Name", "Prod Release Date", "Business Justification"}
-
 func (a AuditBotClient) sendQuestions(ev *slack.MessageEvent, syncChannel chan int,
 	userAllResourceMap map[string]map[string]*UserResource, UniqueId string) {
 
