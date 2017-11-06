@@ -14,7 +14,7 @@
     "password": "password"
   },
   "questions": {
-    "path": "/tmp/AuditBot.txt"
+    "path": "./Auditbot.txt"
   },
   "oauth": {
     "redirectUri": "http://localhost:8080/"

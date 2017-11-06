@@ -191,6 +191,7 @@ func readQuestions(path string) []string {
 	scanner.Split(bufio.ScanLines)
 	questionsSlice := make([]string,0)
 	for scanner.Scan() {
+
 		questionsSlice = append(questionsSlice, scanner.Text())
 	}
 	return questionsSlice
