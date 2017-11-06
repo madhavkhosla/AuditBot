@@ -156,14 +156,14 @@ func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMe
 	i := jira.Issue{
 		Fields: &jira.IssueFields{
 			Assignee: &jira.User{
-				Name: "admin",
+				Name: "Automatic",
 			},
 			Description: description,
 			Type: jira.IssueType{
 				Name: "Story",
 			},
 			Project: jira.Project{
-				Key: "FOR",
+				Key: JiraProject,
 			},
 			Summary: fmt.Sprintf("Intake Form - %s", answers[0]),
 			Reporter: &jira.User{

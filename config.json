@@ -2,7 +2,8 @@
   "jira": {
     "username": "khoslamaddy@gmail.com",
     "password": "maserati273",
-    "baseUrl": "https://madhav-test1.atlassian.net"
+    "baseUrl": "https://madhav-test1.atlassian.net",
+    "project" : "C4MLCREDIT"
   },
   "slack": {
     "clientId": "84201670823.266811782356",

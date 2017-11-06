@@ -10,6 +10,7 @@ var (
 	JiraUserName string
 	JiraPassword string
 	JiraBaseUrl string
+	JiraProject string
 	SlackClientId string
 	SlackSecret string
 	DatabaseUserName string
@@ -29,6 +30,7 @@ func readConfig() {
 		JiraUserName = viper.GetString("jira.username")
 		JiraPassword = viper.GetString("jira.password")
 		JiraBaseUrl = viper.GetString("jira.baseUrl")
+		JiraProject = viper.GetString("jira.project")
 
 		SlackClientId = viper.GetString("slack.clientId")
 		SlackSecret = viper.GetString("slack.clientSecret")

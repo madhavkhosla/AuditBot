@@ -1,15 +1,15 @@
-Requester Name
-Requester Email
 Requesting Team Name
+Requester Name
+Desired Release Date
+Requester Email
 Requesting Art
-Reuqesting Team PO
+Requesting Team PO
 Requesting Team BSA
 Requesting Team Scrum Master
 Impacted Platform
 Request Type
 Initiative Description Including any dependencies
 Business Justification
-Desired Release Date
 Justification for Desired Release Date
 Business Impact if desired release data not met
 Epic
