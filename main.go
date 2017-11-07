@@ -20,14 +20,14 @@ import (
 
 	"strconv"
 
+	"bufio"
+
 	"github.com/andygrunwald/go-jira"
 	"github.com/nlopes/slack"
-	"bufio"
 )
 
 const CREATE = "create"
 const MODIFY = "modify"
-
 
 type question struct {
 	Text string
@@ -139,7 +139,7 @@ func (slackApp SlackApp) Auth(w http.ResponseWriter, r *http.Request, _ httprout
 func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMessageRequest) bool {
 	var description string
 	answers := strings.Split(interactiveMessageRequest.Actions[0].Value, ",")
-	for i := 3; i < len(questions); i++ {
+	for i := 0; i < len(questions); i++ {
 		description = fmt.Sprintf("%s\nQuestion; %s\nAnswer: %s", description, questions[i], answers[i])
 	}
 	jiraClient, err := jira.NewClient(nil, JiraBaseUrl)
@@ -156,7 +156,7 @@ func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMe
 	i := jira.Issue{
 		Fields: &jira.IssueFields{
 			Assignee: &jira.User{
-				Name: "Automatic",
+				Name: "admin",
 			},
 			Description: description,
 			Type: jira.IssueType{
@@ -166,10 +166,6 @@ func (slackApp SlackApp) createJiraIssue(interactiveMessageRequest InteractiveMe
 				Key: JiraProject,
 			},
 			Summary: fmt.Sprintf("Intake Form - %s", answers[0]),
-			Reporter: &jira.User{
-				Name: fmt.Sprintf("%s", answers[1]),
-			},
-			Duedate: answers[2],
 		},
 	}
 	issue, _, err := jiraClient.Issue.Create(&i)
@@ -189,7 +185,7 @@ func readQuestions(path string) []string {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
-	questionsSlice := make([]string,0)
+	questionsSlice := make([]string, 0)
 	for scanner.Scan() {
 
 		questionsSlice = append(questionsSlice, scanner.Text())
@@ -206,7 +202,7 @@ func main() {
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
 	}
-	fmt.Println(slackApp)
+
 	router := httprouter.New()
 	router.GET("/", slackApp.Auth)
 	router.POST("/submit", slackApp.Submit)
